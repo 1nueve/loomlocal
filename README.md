@@ -45,7 +45,7 @@ La primera vez, macOS pide permisos en *Ajustes del Sistema → Privacidad y seg
 | Cámara / Micrófono | La burbuja y tu voz |
 | Accesibilidad | Solo para “Mostrar clics” |
 
-Mientras usas `npm run dev`, la app aparece en esas listas como **“Electron”**; la app instalada con `npm run dist:mac` aparece como **“LoomLocal”**. La app te avisa cuál activar y tiene un botón **Reiniciar LoomLocal**.
+Mientras usas `npm run dev`, macOS da esos permisos a **la terminal** desde la que la abriste (por ejemplo **iTerm** o **Terminal**): activa la terminal en la lista, ciérrala por completo con ⌘Q y vuelve a abrirla. La app instalada con `npm run dist:mac` aparece como **“LoomLocal”** y tiene un botón **Reiniciar LoomLocal**.
 El `.dmg` no está firmado. La primera vez ábrelo con clic derecho → **Abrir**. Cada vez que generes un paquete nuevo, macOS puede volver a pedir el permiso de grabación de pantalla.
 El audio del sistema necesita macOS 13 o posterior.
 

@@ -137,13 +137,28 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
               <strong>Falta un permiso de macOS para grabar la pantalla</strong>
               <ol>
                 <li>Abre <b>Ajustes del Sistema → Privacidad y seguridad → Grabación de pantalla</b>.</li>
-                <li>Activa la casilla de <b>{appName}</b>.{appName === 'Electron' && ' (Así se llama la app mientras la usas con npm run dev.)'}</li>
-                <li>Reinicia LoomLocal para que macOS aplique el permiso.</li>
+                {perm.isDev ? (
+                  <>
+                    <li>
+                      Activa la casilla de <b>{appName}</b>: es la terminal desde la que abriste LoomLocal con <code>npm run dev</code>, y macOS le da a ella el permiso.
+                    </li>
+                    <li>
+                      Cierra <b>{appName}</b> por completo (<kbd>⌘</kbd><kbd>Q</kbd>), ábrelo y vuelve a ejecutar <code>npm run dev</code>.
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li>Activa la casilla de <b>{appName}</b>.</li>
+                    <li>Reinicia LoomLocal para que macOS aplique el permiso.</li>
+                  </>
+                )}
               </ol>
             </div>
             <div className="banner-actions">
               <button onClick={() => void api.openPermissionSettings('screen')}>Abrir Ajustes del Sistema</button>
-              <button className="primary" onClick={() => api.relaunch()}>Reiniciar LoomLocal</button>
+              {!perm.isDev && (
+                <button className="primary" onClick={() => api.relaunch()}>Reiniciar LoomLocal</button>
+              )}
             </div>
           </div>
         )}

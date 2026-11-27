@@ -148,13 +148,15 @@ test('guides macOS first run: screen permission steps without technical errors',
   writeFileSync(join(data, 'settings.json'), JSON.stringify({ sharePort: 0 }))
   const app = await electron.launch({
     args: ['out/main/index.js', '--no-sandbox'],
-    env: { ...process.env, LOOMLOCAL_E2E: '1', LOOMLOCAL_E2E_FAKE_MAC_PERMS: '1', LOOMLOCAL_DATA_DIR: data }
+    env: { ...process.env, LOOMLOCAL_E2E: '1', LOOMLOCAL_E2E_FAKE_MAC_PERMS: '1', TERM_PROGRAM: 'iTerm.app', LOOMLOCAL_DATA_DIR: data }
   })
   try {
     const main = await app.firstWindow()
     await expect(main.getByText('Falta un permiso de macOS para grabar la pantalla')).toBeVisible({ timeout: 15_000 })
-    await expect(main.locator('.banner.steps')).toContainText('Electron')
-    await expect(main.getByRole('button', { name: 'Reiniciar LoomLocal' })).toBeVisible()
+    await expect(main.locator('.banner.steps')).toContainText('Activa la casilla de iTerm')
+    await expect(main.locator('.banner.steps')).toContainText('Cierra iTerm por completo')
+    // Relaunching Electron does not restart the terminal that owns the permission.
+    await expect(main.getByRole('button', { name: 'Reiniciar LoomLocal' })).toHaveCount(0)
     await expect(main.getByText('macOS bloqueó la cámara')).toBeVisible()
     await main.waitForTimeout(1500)
     await expect(main.getByText('No pude listar pantallas')).toHaveCount(0)

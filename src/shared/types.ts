@@ -127,6 +127,8 @@ export interface PermissionStatus {
   platform: string
   /** Name the OS shows in privacy settings: "Electron" in dev, "LoomLocal" when packaged. */
   appName: string
+  /** Running via npm run dev: macOS attributes privacy permissions to the terminal. */
+  isDev: boolean
   screen: string
   camera: string
   microphone: string
