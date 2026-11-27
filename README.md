@@ -14,7 +14,7 @@ Los videos se guardan en `~/LoomLocal/` (`videos/`, `thumbs/`, `captions/` y `li
 
 ## Instalar y ejecutar
 
-Requisitos: Node.js 22 o posterior y git.
+Requisitos: Node.js 22 o posterior, git y **macOS 12 Monterey o posterior** (o Ubuntu 22.04 o posterior). La app usa Electron 43, la última versión compatible con Monterey.
 
 ```bash
 git clone <tu-repo>/loomlocal.git
@@ -112,6 +112,7 @@ terminar ───────────────────► ffmpeg: We
   node -e "require('electron')" && npm run dev
   ```
   Desde la versión 0.1.1, `npm install` lo descarga automáticamente.
+- **`Symbol not found: (_OBJC_CLASS_$_SMAppService)` y "Electron se cerró inesperadamente":** tu macOS es anterior al que exige esa versión de Electron. Desde la versión 0.1.2 se usa Electron 43 (macOS 12 o posterior). Actualiza con `git pull && npm install`.
 - **`Port 5173 is in use, trying another one…`:** otro servidor de desarrollo usa ese puerto. Es solo un aviso: la app usa el siguiente puerto libre.
 - **`Authentication failed` al clonar:** el repo es privado. Inicia sesión con `gh auth login` o clona por SSH: `git clone git@github.com:1nueve/loomlocal.git`.
 

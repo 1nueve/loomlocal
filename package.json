@@ -1,7 +1,7 @@
 {
   "name": "loomlocal",
   "productName": "LoomLocal",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Grabadora de pantalla y c\u00e1mara local, de uso personal: burbuja de c\u00e1mara, dibujo, marcadores, biblioteca, enlaces en tu red y transcripci\u00f3n local.",
   "main": "out/main/index.js",
@@ -27,7 +27,7 @@
     "@types/react": "19.1.17",
     "@types/react-dom": "19.1.11",
     "@vitejs/plugin-react": "6.3.0",
-    "electron": "45.2.3",
+    "electron": "43.8.10",
     "electron-builder": "26.18.1",
     "electron-vite": "6.0.0",
     "react": "19.1.10",
