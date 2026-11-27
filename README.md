@@ -105,6 +105,16 @@ terminar ───────────────────► ffmpeg: We
 - La barra usa `setContentProtection`, que la excluye de la captura en macOS.
 - Los fragmentos se escriben en disco cada segundo: si la app se cierra de golpe, el video no se pierde por completo.
 
+## Problemas comunes
+
+- **`Error: Electron uninstall` al ejecutar `npm run dev`:** el binario de Electron no se descargó. Ejecuta:
+  ```bash
+  node -e "require('electron')" && npm run dev
+  ```
+  Desde la versión 0.1.1, `npm install` lo descarga automáticamente.
+- **`Port 5173 is in use, trying another one…`:** otro servidor de desarrollo usa ese puerto. Es solo un aviso: la app usa el siguiente puerto libre.
+- **`Authentication failed` al clonar:** el repo es privado. Inicia sesión con `gh auth login` o clona por SSH: `git clone git@github.com:1nueve/loomlocal.git`.
+
 ## Desarrollo
 
 ```bash

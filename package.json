@@ -1,9 +1,9 @@
 {
   "name": "loomlocal",
   "productName": "LoomLocal",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
-  "description": "Grabadora de pantalla y cámara local, de uso personal: burbuja de cámara, dibujo, marcadores, biblioteca, enlaces en tu red y transcripción local.",
+  "description": "Grabadora de pantalla y c\u00e1mara local, de uso personal: burbuja de c\u00e1mara, dibujo, marcadores, biblioteca, enlaces en tu red y transcripci\u00f3n local.",
   "main": "out/main/index.js",
   "license": "MIT",
   "scripts": {
@@ -14,7 +14,8 @@
     "test": "vitest run",
     "e2e": "npm run build && playwright test --trace off",
     "dist:mac": "npm run build && electron-builder --mac",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "dist:linux": "npm run build && electron-builder --linux",
+    "postinstall": "node -e \"require('electron')\""
   },
   "optionalDependencies": {
     "ffmpeg-static": "5.3.0",
