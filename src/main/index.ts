@@ -98,6 +98,11 @@ function registerIpc(): void {
   handle('perm:status', () => permissionStatus())
   handle('perm:request', (kind: 'camera' | 'microphone') => requestPermission(kind))
   handle('perm:open', (kind: string) => openPermissionSettings(kind))
+  // macOS only applies a new Screen Recording permission after a restart.
+  listen('app:relaunch', () => {
+    app.relaunch()
+    app.exit(0)
+  })
 
   handle('bubble:show', (cameraId: string | null) => recording.showBubble(cameraId))
   listen('bubble:resize', (size: BubbleSize) => {

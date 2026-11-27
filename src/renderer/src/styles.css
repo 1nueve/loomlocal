@@ -81,7 +81,12 @@ nav button.active { background: var(--panel-2); color: var(--fg); }
 .hint { color: var(--muted); font-size: 13px; margin: 6px 0; }
 .empty { color: var(--muted); text-align: center; padding: 48px 0; }
 .error { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); padding: 10px 12px; border-radius: 8px; margin-top: 12px; }
-.banner { background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 8px; padding: 10px 12px; margin: 8px 0; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.banner { background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 8px; padding: 10px 12px; margin: 8px 0; display: flex; gap: 10px 14px; align-items: center; flex-wrap: wrap; }
+.banner > span, .banner > div:first-child { flex: 1 1 260px; min-width: 0; }
+.banner > button, .banner-actions { flex: 0 0 auto; margin-left: auto; }
+.banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.banner.steps { align-items: flex-start; }
+.banner ol { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 3px; }
 .banner.small { font-size: 13px; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
 .field span { font-size: 12px; color: var(--muted); }
@@ -104,6 +109,7 @@ nav button.active { background: var(--panel-2); color: var(--fg); }
 .meter-track { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
 .meter-bar { height: 100%; background: linear-gradient(90deg, var(--ok), #c9d93b 70%, var(--danger)); transform-origin: left; transform: scaleX(0); transition: transform 60ms linear; }
 .meter-warn { color: var(--danger); font-size: 12px; }
+.meter-hint { color: var(--muted); font-size: 12px; }
 .shortcuts { list-style: none; padding: 0; margin: 14px 0 0; color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
 
 /* ---------- library ---------- */

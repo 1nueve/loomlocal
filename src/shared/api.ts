@@ -38,6 +38,7 @@ export interface LoomApi {
   permissions(): Promise<PermissionStatus>
   requestPermission(kind: 'camera' | 'microphone'): Promise<boolean>
   openPermissionSettings(kind: 'screen' | 'camera' | 'microphone' | 'accessibility'): Promise<void>
+  relaunch(): void
 
   showBubble(cameraId: string | null): Promise<void>
   bubbleResize(size: BubbleSize): void

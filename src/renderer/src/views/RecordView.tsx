@@ -35,9 +35,13 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
   const [error, setError] = useState<string | null>(null)
   const [starting, setStarting] = useState(false)
 
-  const refreshSources = useCallback(async () => {
+  const refreshSources = useCallback(async (quiet = false) => {
     try {
       let list = await api.listSources()
+      if (quiet) {
+        setSources(list)
+        return
+      }
       // The capturer can come back empty right after launch; retry briefly.
       for (let i = 0; i < 5 && list.length === 0; i++) {
         await new Promise((r) => setTimeout(r, 600))
@@ -46,7 +50,9 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
       setSources(list)
       setSourceId((cur) => (cur && list.some((s) => s.id === cur) ? cur : list.find((s) => s.kind === 'screen')?.id ?? list[0]?.id ?? null))
     } catch (e) {
-      setError(`No pude listar pantallas: ${(e as Error).message}`)
+      // Without Screen Recording permission macOS refuses to list sources;
+      // the permission banner already explains that.
+      if (!quiet) setError(`No pude listar pantallas: ${(e as Error).message}`)
     }
   }, [])
 
@@ -63,9 +69,20 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
   }, [])
 
   useEffect(() => {
-    void api.permissions().then(setPerm)
-    void refreshSources()
-    void refreshDevices()
+    void (async () => {
+      let p = await api.permissions()
+      if (p.platform === 'darwin') {
+        // Shows the macOS camera/microphone prompts on first run.
+        for (const kind of ['microphone', 'camera'] as const) {
+          if (p[kind] === 'not-determined') await api.requestPermission(kind)
+        }
+        p = await api.permissions()
+      }
+      setPerm(p)
+      const screenOk = p.platform !== 'darwin' || p.screen === 'granted'
+      void refreshSources(!screenOk)
+      void refreshDevices()
+    })()
     navigator.mediaDevices.addEventListener('devicechange', refreshDevices)
     return () => navigator.mediaDevices.removeEventListener('devicechange', refreshDevices)
   }, [refreshSources, refreshDevices])
@@ -101,8 +118,11 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
 
   const screens = sources.filter((s) => s.kind === 'screen')
   const windows = sources.filter((s) => s.kind === 'window')
-  const needsScreenPerm = perm?.platform === 'darwin' && perm.screen !== 'granted'
-  const needsAccessibility = perm?.platform === 'darwin' && settings.clickRipples && perm.accessibility === false
+  const mac = perm?.platform === 'darwin'
+  const needsScreenPerm = mac && perm.screen !== 'granted'
+  const needsAccessibility = mac && settings.clickRipples && perm.accessibility === false
+  const deniedMedia = mac ? (['camera', 'microphone'] as const).filter((k) => perm[k] === 'denied') : []
+  const appName = perm?.appName ?? 'LoomLocal'
 
   return (
     <div className="record">
@@ -112,17 +132,27 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
           <button className="ghost" onClick={() => void refreshSources()}>Actualizar</button>
         </div>
         {needsScreenPerm && (
-          <div className="banner">
-            macOS necesita el permiso de <b>Grabación de pantalla</b> para LoomLocal. Actívalo y reinicia la app.
-            <button onClick={() => void api.openPermissionSettings('screen')}>Abrir Ajustes del Sistema</button>
+          <div className="banner steps">
+            <div>
+              <strong>Falta un permiso de macOS para grabar la pantalla</strong>
+              <ol>
+                <li>Abre <b>Ajustes del Sistema → Privacidad y seguridad → Grabación de pantalla</b>.</li>
+                <li>Activa la casilla de <b>{appName}</b>.{appName === 'Electron' && ' (Así se llama la app mientras la usas con npm run dev.)'}</li>
+                <li>Reinicia LoomLocal para que macOS aplique el permiso.</li>
+              </ol>
+            </div>
+            <div className="banner-actions">
+              <button onClick={() => void api.openPermissionSettings('screen')}>Abrir Ajustes del Sistema</button>
+              <button className="primary" onClick={() => api.relaunch()}>Reiniciar LoomLocal</button>
+            </div>
           </div>
         )}
         {api.platform === 'linux' && (
           <p className="hint">En Ubuntu con Wayland, el sistema te pedirá elegir la pantalla al empezar.</p>
         )}
-        {sources.length === 0 && (
+        {sources.length === 0 && !needsScreenPerm && (
           <div className="banner">
-            No encontré pantallas para grabar.
+            <span>No encontré pantallas para grabar.</span>
             <button onClick={() => void refreshSources()}>Reintentar</button>
           </div>
         )}
@@ -164,6 +194,14 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
             ))}
           </select>
         </label>
+        {deniedMedia.length > 0 && (
+          <div className="banner small">
+            <span>
+              macOS bloqueó {deniedMedia.map((k) => (k === 'camera' ? 'la cámara' : 'el micrófono')).join(' y ')} para <b>{appName}</b>. Actívalo en Ajustes y reinicia.
+            </span>
+            <button onClick={() => void api.openPermissionSettings(deniedMedia[0])}>Abrir Ajustes</button>
+          </div>
+        )}
         <MicMeter deviceId={micId} />
         <label className="check">
           <input type="checkbox" checked={systemAudio} onChange={(e) => setSystemAudio(e.target.checked)} />
@@ -193,7 +231,9 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
         </label>
         {needsAccessibility && (
           <div className="banner small">
-            Para mostrar clics, macOS pide el permiso de <b>Accesibilidad</b>.
+            <span>
+              Para mostrar clics, activa <b>{appName}</b> en <b>Ajustes del Sistema → Privacidad y seguridad → Accesibilidad</b>.
+            </span>
             <button onClick={() => void api.openPermissionSettings('accessibility').then(() => api.permissions().then(setPerm))}>Dar permiso</button>
           </div>
         )}

@@ -8,9 +8,11 @@ import { useEffect, useRef, useState } from 'react'
 export function MicMeter({ deviceId }: { deviceId: string | null }) {
   const barRef = useRef<HTMLDivElement>(null)
   const [silent, setSilent] = useState(false)
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     setSilent(false)
+    setBlocked(false)
     if (!deviceId) return
     let stream: MediaStream | null = null
     let ctx: AudioContext | null = null
@@ -20,7 +22,11 @@ export function MicMeter({ deviceId }: { deviceId: string | null }) {
 
     void (async () => {
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } })
+        // Raw input for metering: noise suppression would flatten a quiet room
+        // to near silence and trigger a false "no sound" warning.
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        })
         if (cancelled) return stream.getTracks().forEach((t) => t.stop())
         ctx = new AudioContext()
         const analyser = ctx.createAnalyser()
@@ -44,13 +50,13 @@ export function MicMeter({ deviceId }: { deviceId: string | null }) {
           const level = Math.min(1, Math.max(0, (db + 60) / 50))
           if (barRef.current) barRef.current.style.transform = `scaleX(${level})`
           const now = performance.now()
-          if (db > -55) quietSince = now
-          setSilent(now - quietSince > 4000)
+          if (db > -65) quietSince = now
+          setSilent(now - quietSince > 6000)
           raf = requestAnimationFrame(tick)
         }
         tick()
       } catch {
-        setSilent(true)
+        setBlocked(true)
       }
     })()
 
@@ -68,7 +74,8 @@ export function MicMeter({ deviceId }: { deviceId: string | null }) {
       <div className="meter-track">
         <div ref={barRef} className="meter-bar" />
       </div>
-      {silent && <span className="meter-warn">No detectamos sonido en este micrófono.</span>}
+      {blocked && <span className="meter-warn">Sin acceso al micrófono. Revisa el permiso en Ajustes del Sistema.</span>}
+      {!blocked && silent && <span className="meter-hint">No oímos nada todavía. Habla para probar el micrófono.</span>}
     </div>
   )
 }

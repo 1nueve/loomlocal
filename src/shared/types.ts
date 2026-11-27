@@ -125,6 +125,8 @@ export interface DrawState {
 
 export interface PermissionStatus {
   platform: string
+  /** Name the OS shows in privacy settings: "Electron" in dev, "LoomLocal" when packaged. */
+  appName: string
   screen: string
   camera: string
   microphone: string

@@ -11,6 +11,7 @@ const api: LoomApi = {
   permissions: () => ipcRenderer.invoke('perm:status'),
   requestPermission: (kind) => ipcRenderer.invoke('perm:request', kind),
   openPermissionSettings: (kind) => ipcRenderer.invoke('perm:open', kind),
+  relaunch: () => ipcRenderer.send('app:relaunch'),
 
   showBubble: (cameraId) => ipcRenderer.invoke('bubble:show', cameraId),
   bubbleResize: (size) => ipcRenderer.send('bubble:resize', size),

@@ -142,3 +142,26 @@ test('captures the real screen through the display-media handler', async () => {
     rmSync(data, { recursive: true, force: true })
   }
 })
+
+test('guides macOS first run: screen permission steps without technical errors', async () => {
+  const data = mkdtempSync(join(tmpdir(), 'loomlocal-e2e-perms-'))
+  writeFileSync(join(data, 'settings.json'), JSON.stringify({ sharePort: 0 }))
+  const app = await electron.launch({
+    args: ['out/main/index.js', '--no-sandbox'],
+    env: { ...process.env, LOOMLOCAL_E2E: '1', LOOMLOCAL_E2E_FAKE_MAC_PERMS: '1', LOOMLOCAL_DATA_DIR: data }
+  })
+  try {
+    const main = await app.firstWindow()
+    await expect(main.getByText('Falta un permiso de macOS para grabar la pantalla')).toBeVisible({ timeout: 15_000 })
+    await expect(main.locator('.banner.steps')).toContainText('Electron')
+    await expect(main.getByRole('button', { name: 'Reiniciar LoomLocal' })).toBeVisible()
+    await expect(main.getByText('macOS bloqueó la cámara')).toBeVisible()
+    await main.waitForTimeout(1500)
+    await expect(main.getByText('No pude listar pantallas')).toHaveCount(0)
+    await expect(main.getByText('No encontré pantallas')).toHaveCount(0)
+    if (shots) await main.screenshot({ path: join(shots, '7-mac-perms.png') })
+  } finally {
+    await app.close()
+    rmSync(data, { recursive: true, force: true })
+  }
+})

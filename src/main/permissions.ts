@@ -1,12 +1,19 @@
-import { shell, systemPreferences } from 'electron'
+import { app, shell, systemPreferences } from 'electron'
 import type { PermissionStatus } from '../shared/types'
 
+const appName = (): string => (app.isPackaged ? 'LoomLocal' : 'Electron')
+
 export function permissionStatus(): PermissionStatus {
+  if (process.env.LOOMLOCAL_E2E_FAKE_MAC_PERMS) {
+    // Test hook: render the macOS first-run state on any OS.
+    return { platform: 'darwin', appName: appName(), screen: 'not-determined', camera: 'denied', microphone: 'granted', accessibility: false }
+  }
   if (process.platform !== 'darwin') {
-    return { platform: process.platform, screen: 'granted', camera: 'granted', microphone: 'granted', accessibility: null }
+    return { platform: process.platform, appName: appName(), screen: 'granted', camera: 'granted', microphone: 'granted', accessibility: null }
   }
   return {
     platform: process.platform,
+    appName: appName(),
     screen: systemPreferences.getMediaAccessStatus('screen'),
     camera: systemPreferences.getMediaAccessStatus('camera'),
     microphone: systemPreferences.getMediaAccessStatus('microphone'),
@@ -15,7 +22,7 @@ export function permissionStatus(): PermissionStatus {
 }
 
 export async function requestPermission(kind: 'camera' | 'microphone'): Promise<boolean> {
-  if (process.platform !== 'darwin') return true
+  if (process.platform !== 'darwin' || process.env.LOOMLOCAL_E2E_FAKE_MAC_PERMS) return true
   return systemPreferences.askForMediaAccess(kind)
 }
 
@@ -27,7 +34,7 @@ const PANES: Record<string, string> = {
 }
 
 export async function openPermissionSettings(kind: string): Promise<void> {
-  if (process.platform !== 'darwin') return
+  if (process.platform !== 'darwin' || process.env.LOOMLOCAL_E2E_FAKE_MAC_PERMS) return
   if (kind === 'accessibility') {
     // Also triggers the system prompt that adds the app to the list.
     systemPreferences.isTrustedAccessibilityClient(true)
