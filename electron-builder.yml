@@ -1,0 +1,36 @@
+appId: com.personal.loomlocal
+productName: LoomLocal
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - node_modules/ffmpeg-static/**
+  - node_modules/uiohook-napi/**
+mac:
+  target:
+    - dmg
+  category: public.app-category.productivity
+  # Unsigned personal build. See README for first launch on macOS.
+  identity: null
+  hardenedRuntime: false
+  extendInfo:
+    NSCameraUsageDescription: LoomLocal usa la cámara para la burbuja de video.
+    NSMicrophoneUsageDescription: LoomLocal usa el micrófono para grabar tu voz.
+    NSAudioCaptureUsageDescription: LoomLocal graba el audio del sistema si lo activas.
+linux:
+  target:
+    - AppImage
+    - deb
+  category: AudioVideo
+  maintainer: LoomLocal
+  synopsis: Grabadora de pantalla y cámara local
+deb:
+  depends:
+    - libnotify4
+    - libxtst6
+    - libnss3
+npmRebuild: false
+publish: null
