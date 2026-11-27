@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { DrawState, Settings } from '../../../shared/types'
+import type { DrawState, DrawWidth, Settings } from '../../../shared/types'
 
 const api = window.api
 
@@ -8,9 +8,13 @@ interface Point {
   y: number
 }
 
+const STROKE: Record<DrawWidth, number> = { fino: 3, medio: 6, grueso: 12 }
+const HIGHLIGHT: Record<DrawWidth, number> = { fino: 14, medio: 24, grueso: 40 }
+
 interface Shape {
   tool: DrawState['tool']
   color: string
+  width: DrawWidth
   points: Point[]
   /** performance.now() when the stroke was finished; undefined while drawing. */
   doneAt?: number
@@ -34,7 +38,8 @@ function drawShape(ctx: CanvasRenderingContext2D, s: Shape, alpha: number): void
   ctx.fillStyle = s.color
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
-  ctx.lineWidth = s.tool === 'highlighter' ? 22 : 5
+  const lw = s.tool === 'highlighter' ? HIGHLIGHT[s.width] : STROKE[s.width]
+  ctx.lineWidth = lw
   ctx.shadowColor = 'rgba(0,0,0,0.35)'
   ctx.shadowBlur = s.tool === 'highlighter' ? 0 : 4
   const a = pts[0]
@@ -53,7 +58,7 @@ function drawShape(ctx: CanvasRenderingContext2D, s: Shape, alpha: number): void
     ctx.strokeRect(Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(b.x - a.x), Math.abs(b.y - a.y))
   } else if (s.tool === 'arrow') {
     const angle = Math.atan2(b.y - a.y, b.x - a.x)
-    const head = 22
+    const head = Math.max(16, lw * 3.5)
     ctx.beginPath()
     ctx.moveTo(a.x, a.y)
     ctx.lineTo(b.x - Math.cos(angle) * head * 0.6, b.y - Math.sin(angle) * head * 0.6)
@@ -81,7 +86,7 @@ export function Overlay() {
   const [countdown, setCountdown] = useState<number | null>(null)
   const [pointer, setPointer] = useState<Point | null>(null)
   const [ripples, setRipples] = useState<Ripple[]>([])
-  const [draw, setDraw] = useState<DrawState>({ enabled: false, tool: 'pen', color: '#ff3b5c' })
+  const [draw, setDraw] = useState<DrawState>({ enabled: false, tool: 'pen', color: '#ff3b5c', width: 'medio' })
 
   // Render loop: runs only while there is something to draw or fade.
   const kick = () => {
@@ -174,7 +179,7 @@ export function Overlay() {
         onPointerDown={(e) => {
           if (!draw.enabled) return
           ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-          current.current = { tool: draw.tool, color: draw.color, points: [local(e)] }
+          current.current = { tool: draw.tool, color: draw.color, width: draw.width ?? 'medio', points: [local(e)] }
           kick()
         }}
         onPointerMove={(e) => {

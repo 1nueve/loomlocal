@@ -38,7 +38,7 @@ export interface Video {
 }
 
 export type BubbleSize = 's' | 'm' | 'l'
-export type BubbleShape = 'circle' | 'rounded'
+export type BubbleShape = 'circle' | 'rounded' | 'rect'
 
 export interface Settings {
   sharePort: number
@@ -49,6 +49,11 @@ export interface Settings {
   drawFade: boolean
   bubbleSize: BubbleSize
   bubbleShape: BubbleShape
+  /** Custom bubble width in px; 0 means use the bubbleSize preset. */
+  bubbleWidth: number
+  bubbleVoiceRing: boolean
+  hideToolbarWhileRecording: boolean
+  drawWidth: DrawWidth
   convertToMp4: boolean
   whisperEnabled: boolean
   whisperBin: string
@@ -68,6 +73,10 @@ export const DEFAULT_SETTINGS: Settings = {
   drawFade: true,
   bubbleSize: 'm',
   bubbleShape: 'circle',
+  bubbleWidth: 0,
+  bubbleVoiceRing: true,
+  hideToolbarWhileRecording: false,
+  drawWidth: 'medio',
   convertToMp4: true,
   whisperEnabled: true,
   whisperBin: 'whisper-cli',
@@ -116,11 +125,13 @@ export type RecCommand =
   | { type: 'marker' }
 
 export type DrawTool = 'pen' | 'highlighter' | 'arrow' | 'rect'
+export type DrawWidth = 'fino' | 'medio' | 'grueso'
 
 export interface DrawState {
   enabled: boolean
   tool: DrawTool
   color: string
+  width: DrawWidth
 }
 
 export interface PermissionStatus {

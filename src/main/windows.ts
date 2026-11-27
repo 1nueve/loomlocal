@@ -65,17 +65,23 @@ export function createMainWindow(): BrowserWindow {
   return win
 }
 
-export function createBubbleWindow(display: Display, size: number, cameraId: string, shape: string): BrowserWindow {
+export function createBubbleWindow(
+  display: Display,
+  size: { width: number; height: number },
+  cameraId: string,
+  micId: string | null
+): BrowserWindow {
   const wa = display.workArea
   const win = make({
     ...floating,
-    width: size,
-    height: size,
+    width: size.width,
+    height: size.height,
     x: wa.x + 32,
-    y: wa.y + wa.height - size - 32
+    y: wa.y + wa.height - size.height - 32
   })
   pinOnTop(win, 1)
-  loadRoute(win, `/bubble?cam=${encodeURIComponent(cameraId)}&shape=${shape}`)
+  const mic = micId ? `&mic=${encodeURIComponent(micId)}` : ''
+  loadRoute(win, `/bubble?cam=${encodeURIComponent(cameraId)}${mic}`)
   win.once('ready-to-show', () => win.showInactive())
   return win
 }
@@ -99,9 +105,9 @@ export function createOverlayWindow(display: Display): BrowserWindow {
   return win
 }
 
-export const TOOLBAR_SIZE = { width: 780, height: 64 }
+export const TOOLBAR_SIZE = { width: 900, height: 64 }
 
-export function createToolbarWindow(display: Display): BrowserWindow {
+export function createToolbarWindow(display: Display, shouldShow: () => boolean = () => true): BrowserWindow {
   const wa = display.workArea
   const win = make({
     ...floating,
@@ -111,9 +117,12 @@ export function createToolbarWindow(display: Display): BrowserWindow {
     y: wa.y + wa.height - TOOLBAR_SIZE.height - 24
   })
   pinOnTop(win, 2)
-  // Keeps the controls out of the recording on macOS and Windows.
+  // Keeps the controls out of the recording where the OS capture honours it
+  // (macOS 13+ with ScreenCaptureKit, Windows). Not on macOS 12 or Linux.
   win.setContentProtection(true)
   loadRoute(win, '/toolbar')
-  win.once('ready-to-show', () => win.showInactive())
+  win.once('ready-to-show', () => {
+    if (shouldShow()) win.showInactive()
+  })
   return win
 }

@@ -2,7 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, session, shell, type Ip
 import { copyFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { DEFAULT_SETTINGS, type BubbleSize, type DrawState, type Marker, type RecCommand, type RecordingOptions, type RecStatus, type Settings, type ShareInfo, type VideoPatch } from '../shared/types'
+import { DEFAULT_SETTINGS, type BubbleShape, type BubbleSize, type DrawState, type Marker, type RecCommand, type RecordingOptions, type RecStatus, type Settings, type ShareInfo, type VideoPatch } from '../shared/types'
 import { resolveFfmpeg } from './ffmpeg'
 import { readJson, writeJson } from './json-file'
 import { LibraryService, libraryDirs } from './library-service'
@@ -34,7 +34,26 @@ const settingsFile = process.env.LOOMLOCAL_DATA_DIR
   ? join(dataRoot, 'settings.json')
   : join(app.getPath('userData'), 'settings.json')
 
-let settings: Settings = { ...DEFAULT_SETTINGS, ...readJson<Partial<Settings>>(settingsFile, {}) }
+const savedSettings = readJson<Partial<Settings>>(settingsFile, {})
+let settings: Settings = { ...DEFAULT_SETTINGS, ...savedSettings }
+
+/**
+ * Where the OS capture ignores setContentProtection (macOS 12 captures with
+ * CGDisplayStream; Linux has no equivalent), hide the toolbar while recording.
+ */
+function toolbarLeaksIntoCapture(): boolean {
+  if (process.platform === 'linux') return true
+  if (process.platform === 'darwin') return Number(process.getSystemVersion().split('.')[0]) < 13
+  return false
+}
+if (savedSettings.hideToolbarWhileRecording === undefined) settings.hideToolbarWhileRecording = toolbarLeaksIntoCapture()
+
+let saveTimer: NodeJS.Timeout | null = null
+/** Debounced save for values that change continuously (e.g. dragging). */
+function saveSettingsSoon(): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => writeJson(settingsFile, settings), 300)
+}
 let mainWindow: BrowserWindow | null = null
 
 const dirs = libraryDirs(dataRoot)
@@ -104,14 +123,23 @@ function registerIpc(): void {
     app.exit(0)
   })
 
-  handle('bubble:show', (cameraId: string | null) => recording.showBubble(cameraId))
+  handle('bubble:show', (cameraId: string | null, micId?: string | null) => recording.showBubble(cameraId, micId ?? null))
   listen('bubble:resize', (size: BubbleSize) => {
-    recording.resizeBubble(size)
-    settings = { ...settings, bubbleSize: size }
+    const width = recording.resizeBubble(size)
+    settings = { ...settings, bubbleSize: size, bubbleWidth: width ?? settings.bubbleWidth }
     writeJson(settingsFile, settings)
   })
-  listen('bubble:shape', () => {
-    settings = { ...settings, bubbleShape: settings.bubbleShape === 'circle' ? 'rounded' : 'circle' }
+  listen('bubble:resize-to', (width: number) => {
+    const applied = recording.resizeBubbleTo(Number(width))
+    if (applied) {
+      settings = { ...settings, bubbleWidth: applied }
+      saveSettingsSoon()
+    }
+  })
+  listen('bubble:shape', (shape: BubbleShape) => {
+    if (shape !== 'circle' && shape !== 'rounded' && shape !== 'rect') return
+    settings = { ...settings, bubbleShape: shape }
+    recording.setBubbleShape(shape)
     writeJson(settingsFile, settings)
     broadcast('settings:changed', settings)
   })
@@ -127,8 +155,15 @@ function registerIpc(): void {
   listen('countdown:done', () => recording.countdownDone())
   handle('overlay:init', () => recording.overlayInit())
   handle('rec:status', () => recording.currentStatus())
-  listen('draw:set', (s: DrawState) => recording.setDrawing(s))
+  listen('draw:set', (s: DrawState) => {
+    recording.setDrawing(s)
+    if (s.width && s.width !== settings.drawWidth) {
+      settings = { ...settings, drawWidth: s.width }
+      saveSettingsSoon()
+    }
+  })
   listen('draw:clear', () => recording.clearDrawing())
+  listen('toolbar:hide', () => recording.setToolbarVisible(false))
 
   handle('videos:list', () => library.store.list())
   handle('videos:get', (id: string) => library.store.get(id))
@@ -161,6 +196,8 @@ function registerIpc(): void {
 
 app.whenReady().then(async () => {
   recording = new RecordingController({ mainWindow: () => mainWindow, settings: () => settings, library })
+  // Test-only handle so E2E tests can drive controls that live in the tray.
+  if (process.env.LOOMLOCAL_E2E) (globalThis as { __loomlocalTest?: unknown }).__loomlocalTest = { recording }
   session.defaultSession.setDisplayMediaRequestHandler(recording.handleDisplayMedia)
   // Camera, microphone and screen capture are the only permissions we grant.
   session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => {

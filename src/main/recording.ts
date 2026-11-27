@@ -1,5 +1,6 @@
 import {
   desktopCapturer,
+  dialog,
   globalShortcut,
   screen,
   type BrowserWindow,
@@ -8,10 +9,12 @@ import {
   type Streams
 } from 'electron'
 import { appendFile, rm } from 'node:fs/promises'
-import { BUBBLE_PX, type BubbleSize, type DrawState, type Marker, type RecCommand, type RecordingOptions, type RecStatus, type Settings, type SourceInfo } from '../shared/types'
+import { anchorBottomLeft, bubbleSize } from '../shared/bubble'
+import { BUBBLE_PX, type BubbleShape, type BubbleSize, type DrawState, type Marker, type RecCommand, type RecordingOptions, type RecStatus, type Settings, type SourceInfo } from '../shared/types'
 import type { LibraryService } from './library-service'
 import { PointerTracker } from './pointer'
 import { newId } from './store'
+import { RecordingTray } from './tray'
 import { createBubbleWindow, createOverlayWindow, createToolbarWindow } from './windows'
 
 interface Deps {
@@ -35,17 +38,34 @@ export class RecordingController {
   private display: Display = screen.getPrimaryDisplay()
   private bubble: BrowserWindow | null = null
   private bubbleCamera: string | null = null
+  private bubbleMic: string | null = null
+  /** True while the user wants the toolbar hidden during this recording. */
+  private toolbarHidden = false
+  private readonly tray: RecordingTray
   private overlay: BrowserWindow | null = null
   private toolbar: BrowserWindow | null = null
   private recId: string | null = null
   private writes: Promise<void> = Promise.resolve()
   private status: RecStatus = { state: 'idle', elapsedMs: 0, markerCount: 0 }
-  private drawing: DrawState = { enabled: false, tool: 'pen', color: '#ff3b5c' }
+  private drawing: DrawState
   private pendingCountdown: number | null = null
   private sourceNames = new Map<string, string>()
   private readonly pointer: PointerTracker
 
   constructor(private readonly deps: Deps) {
+    this.drawing = { enabled: false, tool: 'pen', color: '#ff3b5c', width: deps.settings().drawWidth }
+    this.tray = new RecordingTray({
+      togglePause: () => this.command({ type: 'toggle-pause' }),
+      marker: () => this.command({ type: 'marker' }),
+      toggleDrawing: () => this.setDrawing({ ...this.drawing, enabled: !this.drawing.enabled }),
+      clearDrawing: () => this.clearDrawing(),
+      toggleToolbar: () => this.toggleToolbar(),
+      restart: () => void this.confirmThen('¿Reiniciar la grabación? Se borrará lo grabado.', 'Reiniciar', { type: 'restart' }),
+      cancel: () => void this.confirmThen('¿Cancelar y borrar esta grabación?', 'Cancelar grabación', { type: 'cancel' }),
+      finish: () => this.command({ type: 'finish' }),
+      toolbarVisible: () => alive(this.toolbar) && this.toolbar.isVisible(),
+      drawing: () => this.drawing.enabled
+    })
     this.pointer = new PointerTracker(
       () => this.overlay,
       () => this.display.bounds
@@ -120,28 +140,44 @@ export class RecordingController {
 
   // ---------- camera bubble ----------
 
-  showBubble(cameraId: string | null): void {
+  /** The mic only drives the voice ring; the recording opens its own stream. */
+  showBubble(cameraId: string | null, micId: string | null = null): void {
     if (!cameraId) {
       this.closeBubble()
       return
     }
-    if (alive(this.bubble) && this.bubbleCamera === cameraId) return
+    if (alive(this.bubble) && this.bubbleCamera === cameraId && this.bubbleMic === micId) return
     this.closeBubble()
     const s = this.deps.settings()
-    this.bubble = createBubbleWindow(this.display, BUBBLE_PX[s.bubbleSize], cameraId, s.bubbleShape)
+    const width = s.bubbleWidth || BUBBLE_PX[s.bubbleSize]
+    this.bubble = createBubbleWindow(this.display, bubbleSize(width, s.bubbleShape, this.display.workArea), cameraId, micId)
     this.bubbleCamera = cameraId
+    this.bubbleMic = micId
     this.bubble.on('closed', () => {
       this.bubble = null
       this.bubbleCamera = null
+      this.bubbleMic = null
     })
   }
 
-  resizeBubble(size: BubbleSize): void {
-    if (!alive(this.bubble)) return
-    const px = BUBBLE_PX[size]
+  resizeBubble(size: BubbleSize): number | null {
+    return this.resizeBubbleTo(BUBBLE_PX[size])
+  }
+
+  /** Free resize from the bubble's handle. Returns the width actually applied. */
+  resizeBubbleTo(width: number, shape: BubbleShape = this.deps.settings().bubbleShape): number | null {
+    if (!alive(this.bubble)) return null
     const b = this.bubble.getBounds()
-    // Keep the bottom-left corner anchored.
-    this.bubble.setBounds({ x: b.x, y: b.y + b.height - px, width: px, height: px })
+    const area = screen.getDisplayMatching(b).workArea
+    const size = bubbleSize(width, shape, area)
+    if (size.width !== b.width || size.height !== b.height) this.bubble.setBounds(anchorBottomLeft(b, size))
+    return size.width
+  }
+
+  /** Re-applies the aspect ratio after a shape change. */
+  setBubbleShape(shape: BubbleShape): void {
+    if (!alive(this.bubble)) return
+    this.resizeBubbleTo(this.bubble.getBounds().width, shape)
   }
 
   private moveBubbleToDisplay(): void {
@@ -157,6 +193,39 @@ export class RecordingController {
     if (alive(this.bubble)) this.bubble.close()
     this.bubble = null
     this.bubbleCamera = null
+    this.bubbleMic = null
+  }
+
+  // ---------- toolbar visibility ----------
+
+  private hideWhileRecording(): boolean {
+    return this.deps.settings().hideToolbarWhileRecording
+  }
+
+  setToolbarVisible(visible: boolean): void {
+    this.toolbarHidden = !visible
+    if (alive(this.toolbar)) {
+      if (visible) {
+        this.toolbar.showInactive()
+        this.toolbar.moveTop()
+      } else this.toolbar.hide()
+    }
+    this.tray.invalidate()
+  }
+
+  toggleToolbar(): void {
+    this.setToolbarVisible(!(alive(this.toolbar) && this.toolbar.isVisible()))
+  }
+
+  private async confirmThen(message: string, confirmLabel: string, cmd: RecCommand): Promise<void> {
+    const res = await dialog.showMessageBox({
+      type: 'question',
+      message,
+      buttons: [confirmLabel, 'Seguir grabando'],
+      defaultId: 1,
+      cancelId: 1
+    })
+    if (res.response === 0) this.command(cmd)
   }
 
   // ---------- session lifecycle ----------
@@ -173,10 +242,14 @@ export class RecordingController {
       this.overlay = createOverlayWindow(this.display)
       this.overlay.on('closed', () => (this.overlay = null))
     }
+    // The toolbar is shown for the countdown and hidden once recording starts
+    // when "hide while recording" is on.
+    this.toolbarHidden = false
     if (!alive(this.toolbar)) {
-      this.toolbar = createToolbarWindow(this.display)
+      this.toolbar = createToolbarWindow(this.display, () => !this.toolbarHidden)
       this.toolbar.on('closed', () => (this.toolbar = null))
-    }
+    } else this.setToolbarVisible(true)
+    this.tray.show()
     this.registerShortcuts()
     this.pointer.start({ cursor: s.highlightCursor, clicks: s.clickRipples })
 
@@ -211,7 +284,8 @@ export class RecordingController {
       this.overlay.setFocusable(this.drawing.enabled)
       this.overlay.webContents.send('overlay:countdown', null)
     }
-    if (alive(this.toolbar)) this.toolbar.moveTop()
+    if (this.hideWhileRecording()) this.setToolbarVisible(false)
+    else if (alive(this.toolbar)) this.toolbar.moveTop()
     const main = this.deps.mainWindow()
     if (alive(main)) main.webContents.send('rec:go')
   }
@@ -252,6 +326,8 @@ export class RecordingController {
 
   private teardown(): void {
     this.pointer.stop()
+    this.tray.destroy()
+    this.toolbarHidden = false
     this.unregisterShortcuts()
     if (alive(this.overlay)) this.overlay.close()
     if (alive(this.toolbar)) this.toolbar.close()
@@ -278,6 +354,7 @@ export class RecordingController {
   setStatus(status: RecStatus): void {
     this.status = status
     if (alive(this.toolbar)) this.toolbar.webContents.send('rec:state', status)
+    this.tray.update(status)
   }
 
   setDrawing(state: DrawState): void {
@@ -295,10 +372,11 @@ export class RecordingController {
       this.overlay.setFocusable(state.enabled)
       if (state.enabled) this.overlay.focus()
       this.overlay.webContents.send('overlay:drawing', state)
-      if (alive(this.toolbar)) this.toolbar.moveTop()
+      if (alive(this.toolbar) && this.toolbar.isVisible()) this.toolbar.moveTop()
       if (alive(this.bubble)) this.bubble.moveTop()
     }
     if (alive(this.toolbar)) this.toolbar.webContents.send('overlay:drawing', state)
+    this.tray.invalidate()
   }
 
   clearDrawing(): void {
@@ -319,6 +397,7 @@ export class RecordingController {
     bind('CommandOrControl+Shift+M', () => this.command({ type: 'marker' }))
     bind('CommandOrControl+Shift+D', () => this.setDrawing({ ...this.drawing, enabled: !this.drawing.enabled }))
     bind('CommandOrControl+Shift+E', () => this.clearDrawing())
+    bind('CommandOrControl+Shift+H', () => this.toggleToolbar())
   }
 
   private unregisterShortcuts(): void {
@@ -328,6 +407,7 @@ export class RecordingController {
       'CommandOrControl+Shift+M',
       'CommandOrControl+Shift+D',
       'CommandOrControl+Shift+E',
+      'CommandOrControl+Shift+H',
       'Escape'
     ]) {
       if (globalShortcut.isRegistered(a)) globalShortcut.unregister(a)

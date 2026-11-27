@@ -1,6 +1,5 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { BubbleShape } from '../../shared/types'
 import { App } from './App'
 import { Bubble } from './overlay/Bubble'
 import { Overlay } from './overlay/Overlay'
@@ -14,7 +13,7 @@ function pick() {
   switch (path) {
     case '/bubble':
       document.body.classList.add('floating')
-      return <Bubble cameraId={params.get('cam') ?? ''} initialShape={(params.get('shape') as BubbleShape) ?? 'circle'} />
+      return <Bubble cameraId={params.get('cam') ?? ''} micId={params.get('mic')} />
     case '/overlay':
       document.body.classList.add('floating')
       return <Overlay />

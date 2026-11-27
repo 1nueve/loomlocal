@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatDuration } from '../../../shared/vtt'
-import type { DrawState, DrawTool, RecStatus } from '../../../shared/types'
+import type { DrawState, DrawTool, DrawWidth, RecStatus } from '../../../shared/types'
 
 const api = window.api
 
@@ -11,13 +11,18 @@ const TOOLS: Array<{ id: DrawTool; label: string; icon: string }> = [
   { id: 'rect', label: 'Rectángulo', icon: '▭' }
 ]
 const COLORS = ['#ff3b5c', '#ffd60a', '#30d158', '#0a84ff', '#ffffff']
+const WIDTHS: Array<{ id: DrawWidth; label: string; dot: number }> = [
+  { id: 'fino', label: 'Fino', dot: 4 },
+  { id: 'medio', label: 'Medio', dot: 7 },
+  { id: 'grueso', label: 'Grueso', dot: 11 }
+]
 
 /** Floating controls. Excluded from the capture on macOS via content protection. */
 export function Toolbar() {
   const [status, setStatus] = useState<RecStatus>({ state: 'countdown', elapsedMs: 0, markerCount: 0 })
   const [stamp, setStamp] = useState(performance.now())
   const [, tick] = useState(0)
-  const [draw, setDraw] = useState<DrawState>({ enabled: false, tool: 'pen', color: COLORS[0] })
+  const [draw, setDraw] = useState<DrawState>({ enabled: false, tool: 'pen', color: COLORS[0], width: 'medio' })
 
   useEffect(() => {
     const offs = [
@@ -27,6 +32,7 @@ export function Toolbar() {
       }),
       api.on('overlay:drawing', (s) => setDraw(s as DrawState))
     ]
+    void api.overlayInit().then((init) => setDraw(init.drawing))
     void api.recStatus().then((s) => {
       setStatus(s)
       setStamp(performance.now())
@@ -71,6 +77,19 @@ export function Toolbar() {
               {t.icon}
             </button>
           ))}
+          <span className="sep" />
+          {WIDTHS.map((w) => (
+            <button
+              key={w.id}
+              className={`tb small width ${draw.width === w.id ? 'on' : ''}`}
+              onClick={() => updateDraw({ width: w.id })}
+              title={`Grosor ${w.label.toLowerCase()}`}
+              aria-label={`Grosor ${w.label.toLowerCase()}`}
+            >
+              <span className="width-dot" style={{ width: w.dot, height: w.dot, background: draw.color }} />
+            </button>
+          ))}
+          <span className="sep" />
           {COLORS.map((c) => (
             <button
               key={c}
@@ -83,6 +102,9 @@ export function Toolbar() {
         </>
       )}
       <button className="tb small" onClick={() => api.clearDrawing()} title="Borrar trazos">⌫</button>
+      <button className="tb small" onClick={() => api.hideToolbar()} title="Ocultar esta barra (⌘⇧H para volver a mostrarla)">
+        ⌄
+      </button>
       <span className="sep" />
       <button
         className="tb"

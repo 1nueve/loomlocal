@@ -1,7 +1,7 @@
 {
   "name": "loomlocal",
   "productName": "LoomLocal",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "Grabadora de pantalla y c\u00e1mara local, de uso personal: burbuja de c\u00e1mara, dibujo, marcadores, biblioteca, enlaces en tu red y transcripci\u00f3n local.",
   "main": "out/main/index.js",

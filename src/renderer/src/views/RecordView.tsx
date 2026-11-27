@@ -90,8 +90,8 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
   // Show the camera bubble as a live preview while setting up.
   useEffect(() => {
     savePref('camera', cameraId)
-    void api.showBubble(cameraId)
-  }, [cameraId])
+    void api.showBubble(cameraId, micId)
+  }, [cameraId, micId])
   useEffect(() => savePref('mic', micId), [micId])
   useEffect(() => savePref('systemAudio', systemAudio ? '1' : '0'), [systemAudio])
 
@@ -209,6 +209,12 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
             ))}
           </select>
         </label>
+        {cameraId && (
+          <label className="check">
+            <input type="checkbox" checked={settings.bubbleVoiceRing} onChange={(e) => onSettings({ bubbleVoiceRing: e.target.checked })} />
+            <span>Borde de la cámara que se ilumina al hablar</span>
+          </label>
+        )}
         {deniedMedia.length > 0 && (
           <div className="banner small">
             <span>
@@ -256,6 +262,19 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
           <input type="checkbox" checked={settings.drawFade} onChange={(e) => onSettings({ drawFade: e.target.checked })} />
           <span>Los trazos se desvanecen solos</span>
         </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={settings.hideToolbarWhileRecording}
+            onChange={(e) => onSettings({ hideToolbarWhileRecording: e.target.checked })}
+          />
+          <span>Ocultar la barra de controles mientras grabo (para que no salga en el video)</span>
+        </label>
+        {settings.hideToolbarWhileRecording && (
+          <p className="hint">
+            Controla la grabación desde el icono <b>●</b> de la {api.platform === 'darwin' ? 'barra de menús' : 'bandeja del sistema'} o con los atajos.
+          </p>
+        )}
 
         {error && <div className="error">{error}</div>}
         <button className="primary big" disabled={!sourceId || starting || engine.busy} onClick={() => void start()}>
@@ -267,6 +286,7 @@ export function RecordView({ settings, onSettings }: { settings: Settings; onSet
           <li><kbd>{mod}</kbd>+<kbd>⇧</kbd>+<kbd>D</kbd> dibujar · <kbd>Esc</kbd> salir</li>
           <li><kbd>{mod}</kbd>+<kbd>⇧</kbd>+<kbd>E</kbd> borrar trazos</li>
           <li><kbd>{mod}</kbd>+<kbd>⇧</kbd>+<kbd>M</kbd> marcador</li>
+          <li><kbd>{mod}</kbd>+<kbd>⇧</kbd>+<kbd>H</kbd> mostrar u ocultar la barra</li>
         </ul>
       </aside>
     </div>

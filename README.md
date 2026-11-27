@@ -56,6 +56,16 @@ El audio del sistema necesita macOS 13 o posterior.
 - **Audio del sistema:** marca la casilla y elige la fuente *“Monitor of …”* (PulseAudio/PipeWire).
 - En Linux, la barra de controles aparece en el video, porque el sistema no permite excluirla. Arrástrala a una esquina.
 
+## Que los controles no salgan en el video
+
+En **macOS 13 o posterior** la barra de controles se excluye sola de la grabación. En **macOS 12 Monterey y en Linux** el sistema no lo permite. Ahí LoomLocal **oculta la barra al empezar a grabar** (opción en Ajustes) y te deja controlar todo desde el icono **● 0:00** de la barra de menús o con los atajos. Con <kbd>⌘⇧H</kbd> muestras u ocultas la barra; mientras está visible, sale en el video.
+
+## Burbuja de cámara
+
+- Formas: círculo, cuadrado y **rectángulo vertical 9:16**.
+- Tamaño libre: arrastra el asa ↗ de la esquina superior derecha. S, M y L son atajos.
+- El **borde se ilumina al ritmo de tu voz** (puedes desactivarlo).
+
 ## Atajos durante la grabación
 
 | macOS | Ubuntu | Acción |
@@ -65,6 +75,7 @@ El audio del sistema necesita macOS 13 o posterior.
 | ⌘⇧D | Ctrl+Shift+D | Dibujar (Esc para salir) |
 | ⌘⇧E | Ctrl+Shift+E | Borrar trazos |
 | ⌘⇧M | Ctrl+Shift+M | Agregar marcador |
+| ⌘⇧H | Ctrl+Shift+H | Mostrar u ocultar la barra de controles |
 
 ## Transcripción local con Whisper
 

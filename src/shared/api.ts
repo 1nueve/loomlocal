@@ -1,4 +1,5 @@
 import type {
+  BubbleShape,
   BubbleSize,
   DrawState,
   Marker,
@@ -40,9 +41,10 @@ export interface LoomApi {
   openPermissionSettings(kind: 'screen' | 'camera' | 'microphone' | 'accessibility'): Promise<void>
   relaunch(): void
 
-  showBubble(cameraId: string | null): Promise<void>
+  showBubble(cameraId: string | null, micId: string | null): Promise<void>
   bubbleResize(size: BubbleSize): void
-  bubbleShape(): void
+  bubbleResizeTo(width: number): void
+  bubbleShape(shape: BubbleShape): void
 
   recSelect(opts: RecordingOptions): Promise<void>
   recPrepare(): Promise<void>
@@ -57,6 +59,7 @@ export interface LoomApi {
   recStatus(): Promise<RecStatus>
   setDrawing(state: DrawState): void
   clearDrawing(): void
+  hideToolbar(): void
 
   listVideos(): Promise<Video[]>
   getVideo(id: string): Promise<Video | null>

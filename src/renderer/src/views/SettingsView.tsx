@@ -52,6 +52,18 @@ export function SettingsView({ settings, share, onSettings }: { settings: Settin
           </select>
         </label>
         <label className="check">
+          <input
+            type="checkbox"
+            checked={settings.hideToolbarWhileRecording}
+            onChange={(e) => void onSettings({ hideToolbarWhileRecording: e.target.checked })}
+          />
+          <span>Ocultar la barra de controles mientras grabo (en macOS 12 y Linux la barra saldría en el video)</span>
+        </label>
+        <label className="check">
+          <input type="checkbox" checked={settings.bubbleVoiceRing} onChange={(e) => void onSettings({ bubbleVoiceRing: e.target.checked })} />
+          <span>Borde de la cámara que se ilumina al hablar</span>
+        </label>
+        <label className="check">
           <input type="checkbox" checked={settings.convertToMp4} onChange={(e) => void onSettings({ convertToMp4: e.target.checked })} />
           <span>Convertir a MP4 (H.264) para que se vea en cualquier dispositivo, incluido el iPhone</span>
         </label>

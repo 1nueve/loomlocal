@@ -13,9 +13,10 @@ const api: LoomApi = {
   openPermissionSettings: (kind) => ipcRenderer.invoke('perm:open', kind),
   relaunch: () => ipcRenderer.send('app:relaunch'),
 
-  showBubble: (cameraId) => ipcRenderer.invoke('bubble:show', cameraId),
+  showBubble: (cameraId, micId) => ipcRenderer.invoke('bubble:show', cameraId, micId),
   bubbleResize: (size) => ipcRenderer.send('bubble:resize', size),
-  bubbleShape: () => ipcRenderer.send('bubble:shape'),
+  bubbleResizeTo: (width) => ipcRenderer.send('bubble:resize-to', width),
+  bubbleShape: (shape) => ipcRenderer.send('bubble:shape', shape),
 
   recSelect: (opts) => ipcRenderer.invoke('rec:select', opts),
   recPrepare: () => ipcRenderer.invoke('rec:prepare'),
@@ -30,6 +31,7 @@ const api: LoomApi = {
   recStatus: () => ipcRenderer.invoke('rec:status'),
   setDrawing: (state) => ipcRenderer.send('draw:set', state),
   clearDrawing: () => ipcRenderer.send('draw:clear'),
+  hideToolbar: () => ipcRenderer.send('toolbar:hide'),
 
   listVideos: () => ipcRenderer.invoke('videos:list'),
   getVideo: (id) => ipcRenderer.invoke('videos:get', id),
